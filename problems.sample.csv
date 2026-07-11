@@ -1,0 +1,5 @@
+ID,Problems,Solutions,Tags,Date
+sample0000001,Flask app not reloading after code changes during development,"Set debug=True in app.run() and FLASK_ENV=development so the server restarts automatically whenever a file changes.","flask, python, web",2024-10-05
+sample0000002,CORS error when calling my API from a separate frontend,"Installed flask-cors and added CORS(app). The browser stopped blocking cross-origin requests.","flask, api, web",2024-11-25
+sample0000003,Low engagement on social posts at certain times,"Tested different posting times, used stronger visuals, and added a few relevant hashtags. Engagement improved once I posted when my audience was actually online.","marketing, social",2024-04-15
+sample0000004,Bread came out too dense every time,"The yeast was old. Proofed fresh yeast in warm water first, kneaded longer to build gluten, and let it rise until doubled for a much lighter loaf.","cooking, baking",2024-06-10

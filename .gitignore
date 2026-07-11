@@ -1,0 +1,12 @@
+.env
+chroma_db/
+__pycache__/
+*.pyc
+static/vendor/
+
+# your personal knowledge base — never share it publicly.
+# a fresh clone auto-creates an empty one; problems.sample.csv is the demo.
+problems.csv
+
+# private working notes — kept local, not shared publicly
+PROJECT_SUMMARY.md

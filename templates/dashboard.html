@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Logbook — RE-CALL</title>
+<link rel="icon" href="{{ url_for('static', filename='icon.png') }}">
+<!-- UI assets: LOCAL files (default) — run `python get_vendor.py` once to download them.
+     To use CDN instead: comment the local lines and uncomment the CDN block below each one. -->
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/fonts.css') }}">
+<!-- CDN option:
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+-->
+<script>
+  document.documentElement.dataset.theme = localStorage.getItem('recall-theme') || 'dark';
+</script>
+<script src="{{ url_for('static', filename='vendor/tailwind.js') }}"></script>
+<!-- CDN option:
+<script src="https://cdn.tailwindcss.com"></script>
+-->
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      bg: 'var(--bg)', surface: 'var(--surface)', surface2: 'var(--surface-2)',
+      ink: 'var(--ink)', muted: 'var(--muted)', line: 'var(--line)',
+      accent: 'var(--accent)', accentink: 'var(--accent-ink)', danger: 'var(--danger)'
+    },
+    fontFamily: {
+      display: ['"Bricolage Grotesque"', 'sans-serif'],
+      body: ['Inter', 'sans-serif'],
+      mono: ['"JetBrains Mono"', 'monospace']
+    },
+    boxShadow: { card: 'var(--shadow)' }
+  }}
+}
+</script>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="{{ url_for('static', filename='vendor/lucide.min.js') }}"></script>
+<!-- CDN option:
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+-->
+<script src="{{ url_for('static', filename='voice.js') }}"></script>
+</head>
+<body class="bg-bg text-ink font-body min-h-screen bg-grid">
+
+<header class="sticky top-0 z-40 backdrop-blur-md border-b border-line" style="background:color-mix(in srgb, var(--bg) 72%, transparent)">
+  <div class="max-w-5xl mx-auto flex items-center gap-3 px-5 py-4">
+    <a href="/" class="flex items-baseline gap-2.5 no-underline">
+      <span class="font-display font-bold text-xl tracking-wide">RE<span class="text-accent">-</span>CALL</span>
+      <span class="font-mono text-[11px] text-muted tracking-widest uppercase hidden sm:inline">personal logbook</span>
+    </a>
+    <div class="flex-1"></div>
+    <button id="themeBtn" aria-label="Switch theme" class="btn-ghost">
+      <i data-lucide="sun-moon" class="w-4 h-4"></i><span class="hidden sm:inline">Theme</span>
+    </button>
+    <a href="/" class="btn-ghost"><i data-lucide="search" class="w-4 h-4"></i>Search</a>
+    <a href="/logout" class="btn-ghost"><i data-lucide="log-out" class="w-4 h-4"></i><span class="hidden sm:inline">Sign out</span></a>
+  </div>
+</header>
+
+<main class="max-w-4xl mx-auto px-5 mt-10 mb-24">
+  <div class="mb-2"><span class="eyebrow">Capture &amp; keep</span></div>
+  <div class="flex items-baseline gap-3.5 mb-7">
+    <h2 class="font-display font-extrabold tracking-tight text-4xl m-0">Logbook</h2>
+    <span id="count" class="font-mono text-xs text-muted"></span>
+  </div>
+
+  <!-- new entry -->
+  <section class="bg-surface border border-line rounded-2xl shadow-card p-6 mb-6">
+    <h3 class="flex items-center gap-2 font-display font-semibold text-base m-0 mb-4">
+      <i data-lucide="plus-circle" class="w-4 h-4 text-accent"></i>New entry
+    </h3>
+    <div class="flex items-center justify-end gap-2 mb-3">
+      <span class="font-mono text-[10px] text-muted uppercase tracking-widest">Voice</span>
+      <select class="voice-lang input !w-auto !py-1.5 !px-2 text-xs" aria-label="Voice language">
+        <option value="en-US">English</option>
+        <option value="en-IN">English (India)</option>
+        <option value="ur-PK">اردو</option>
+        <option value="hi-IN">हिन्दी</option>
+      </select>
+    </div>
+    <div class="mb-4">
+      <label for="npProblem" class="block font-semibold text-xs text-muted mb-1.5">
+        Problem or question — write it the way you'd search for it later</label>
+      <div class="voice-wrap">
+        <input id="npProblem" placeholder="e.g. Facebook ads rejected for too much text in image" class="input pr-12">
+        <button type="button" class="voice-mic" data-voice-target="#npProblem" aria-label="Dictate problem" title="Dictate">
+          <i data-lucide="mic" class="w-4 h-4"></i></button>
+      </div>
+    </div>
+    <div class="mb-4">
+      <label for="npSolution" class="block font-semibold text-xs text-muted mb-1.5">
+        Solution — what worked, and why</label>
+      <div class="voice-wrap">
+        <textarea id="npSolution" rows="4" class="input resize-y pr-12"
+          placeholder="What you did, the exact step or setting, and why it worked. Tip: tap the mic and just talk."></textarea>
+        <button type="button" class="voice-mic voice-mic-top" data-voice-target="#npSolution" aria-label="Dictate solution" title="Dictate">
+          <i data-lucide="mic" class="w-4 h-4"></i></button>
+      </div>
+    </div>
+    <div class="mb-4">
+      <label for="npTags" class="block font-semibold text-xs text-muted mb-1.5">
+        Tags — optional, comma-separated</label>
+      <input id="npTags" placeholder="e.g. marketing, facebook  ·  cooking  ·  python, flask" class="input">
+    </div>
+    <button id="saveBtn" type="button" class="btn-primary">
+      <i data-lucide="save" class="w-4 h-4"></i>Save entry
+    </button>
+  </section>
+
+  <!-- pending-index warning (shown when some entries aren't searchable yet) -->
+  <div id="pendingBar" class="hidden items-center gap-3 mb-5 rounded-xl border border-danger/50 bg-danger/10 px-4 py-3">
+    <i data-lucide="alert-triangle" class="w-4 h-4 text-danger shrink-0"></i>
+    <span id="pendingMsg" class="text-sm text-ink flex-1"></span>
+    <button type="button" id="reindexBtn" class="btn-ghost btn-sm shrink-0">
+      <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>Re-index now</button>
+  </div>
+
+  <!-- entries -->
+  <section class="bg-surface border border-line rounded-2xl shadow-card p-6">
+    <h3 class="flex items-center gap-2 font-display font-semibold text-base m-0 mb-4">
+      <i data-lucide="library" class="w-4 h-4 text-accent"></i>All entries
+    </h3>
+    <div class="relative mb-4">
+      <i data-lucide="filter" class="w-3.5 h-3.5 text-muted absolute left-4 top-1/2 -translate-y-1/2"></i>
+      <input id="filterInput" placeholder="Filter entries…" class="input pl-10">
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="text-left">
+            <th class="th w-[34%]">Problem</th>
+            <th class="th hidden md:table-cell">Solution</th>
+            <th class="th w-[110px]">Date</th>
+            <th class="th w-[120px]"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div id="pager" class="items-center justify-between mt-4 hidden">
+      <button type="button" id="prevBtn" class="btn-ghost btn-sm">
+        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>Prev</button>
+      <span id="pageInfo" class="font-mono text-xs text-muted"></span>
+      <button type="button" id="nextBtn" class="btn-ghost btn-sm">
+        Next<i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+    </div>
+  </section>
+</main>
+
+<dialog id="editModal" class="bg-surface text-ink border border-line rounded-2xl shadow-card p-7 w-[min(560px,92vw)]">
+  <h3 class="font-display font-semibold text-lg m-0 mb-4">Edit entry</h3>
+  <div class="mb-4">
+    <label for="edProblem" class="block font-semibold text-xs text-muted mb-1.5">Problem</label>
+    <input id="edProblem" class="input">
+  </div>
+  <div class="mb-4">
+    <label for="edSolution" class="block font-semibold text-xs text-muted mb-1.5">Solution</label>
+    <textarea id="edSolution" rows="4" class="input resize-y"></textarea>
+  </div>
+  <div class="mb-4">
+    <label for="edTags" class="block font-semibold text-xs text-muted mb-1.5">Tags</label>
+    <input id="edTags" class="input">
+  </div>
+  <div class="mb-5">
+    <label for="edDate" class="block font-semibold text-xs text-muted mb-1.5">Date</label>
+    <input id="edDate" type="date" class="input">
+  </div>
+  <div class="flex justify-end gap-2.5">
+    <button id="edCancel" type="button" class="btn-ghost">Cancel</button>
+    <button id="edSave" type="button" class="btn-primary">
+      <i data-lucide="check" class="w-4 h-4"></i>Save changes</button>
+  </div>
+</dialog>
+
+<div id="toast" class="toast">
+  <i data-lucide="check-circle-2" class="w-4 h-4"></i><span id="toastMsg"></span>
+</div>
+
+<style>
+  .input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--ink);
+    font: 500 .95rem Inter, sans-serif;
+    padding: 11px 15px;
+    transition: border-color .15s;
+  }
+  .input:focus { outline: none; border-color: var(--accent); }
+  .th {
+    font: 600 .68rem "JetBrains Mono", monospace;
+    color: var(--muted);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .td { padding: 13px 12px; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+  tbody tr:hover .td { background: var(--surface-2); }
+</style>
+
+<script>
+const $ = s => document.querySelector(s);
+let entries = [];          // current page only
+let page = 1, pages = 1, total = 0, pending = 0;
+let editingId = null;
+lucide.createIcons();
+
+$('#themeBtn').onclick = () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('recall-theme', next);
+};
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+let toastTimer;
+function toast(msg) {
+  $('#toastMsg').textContent = msg;
+  $('#toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 1900);
+}
+window.recallToast = toast;   // let voice.js surface mic errors
+async function api(url, method = 'GET', body) {
+  const r = await fetch(url, { method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Something went wrong.');
+  return data;
+}
+
+function render() {
+  const q = $('#filterInput').value.trim().toLowerCase();
+  const shown = entries.filter(e =>
+    !q || e.Problems.toLowerCase().includes(q) || e.Solutions.toLowerCase().includes(q)
+       || (e.Tags || '').toLowerCase().includes(q));
+  $('#count').textContent = `${total} entries`;
+  // pending-index warning banner
+  const bar = $('#pendingBar');
+  bar.classList.toggle('hidden', pending === 0);
+  bar.classList.toggle('flex', pending > 0);
+  if (pending > 0)
+    $('#pendingMsg').textContent =
+      `${pending} entr${pending === 1 ? 'y is' : 'ies are'} saved but not searchable yet `
+      + `(couldn't reach Gemini when saving). Click to index them now.`;
+  // pager (only shown when there's more than one page)
+  const pager = $('#pager');
+  pager.classList.toggle('hidden', pages <= 1);
+  pager.classList.toggle('flex', pages > 1);
+  $('#pageInfo').textContent = `Page ${page} of ${pages}`;
+  $('#prevBtn').disabled = page <= 1;
+  $('#nextBtn').disabled = page >= pages;
+  $('#tbody').innerHTML = shown.length ? shown.map(e => `
+    <tr data-id="${e.ID}">
+      <td class="td font-semibold">${escapeHtml(e.Problems)}
+        ${e.indexed === false ? `<span class="ml-2 align-middle font-mono text-[10px] text-danger border border-danger/50 rounded px-1.5 py-0.5">not searchable yet</span>` : ''}
+        ${(e.Tags||'').trim() ? `<div class="font-normal font-mono text-[10px] text-muted mt-1">${
+          e.Tags.split(',').map(t=>'#'+escapeHtml(t.trim())).join(' ')}</div>` : ''}</td>
+      <td class="td text-muted hidden md:table-cell">${escapeHtml(e.Solutions)}</td>
+      <td class="td font-mono text-xs text-muted whitespace-nowrap">${escapeHtml(e.Date)}</td>
+      <td class="td whitespace-nowrap">
+        <button type="button" class="btn-ghost btn-sm editBtn"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+        <button type="button" class="btn-ghost btn-sm btn-danger delBtn"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+      </td>
+    </tr>`).join('')
+    : `<tr><td colspan="4" class="td text-center text-muted py-9">
+        No entries${q ? ' match this filter' : ' yet — save your first one above'}.</td></tr>`;
+  lucide.createIcons();
+  document.querySelectorAll('.editBtn').forEach(b => b.onclick = () => openEdit(b.closest('tr').dataset.id));
+  document.querySelectorAll('.delBtn').forEach(b => b.onclick = () => del(b.closest('tr').dataset.id));
+}
+
+async function load(p = page) {
+  try {
+    const data = await api(`/api/entries?page=${p}`);
+    entries = data.entries;
+    page = data.page; pages = data.pages; total = data.total;
+    pending = data.pending || 0;
+    render();
+  } catch (e) { toast(e.message); }
+}
+
+$('#filterInput').oninput = render;   // filters the current page
+$('#prevBtn').onclick = () => { if (page > 1) load(page - 1); };
+$('#nextBtn').onclick = () => { if (page < pages) load(page + 1); };
+$('#reindexBtn').onclick = async () => {
+  $('#reindexBtn').disabled = true;
+  try {
+    const res = await api('/api/reindex', 'POST');
+    toast(res.message);
+    await load(page);
+  } catch (e) { toast(e.message); }
+  $('#reindexBtn').disabled = false;
+};
+
+$('#saveBtn').onclick = async () => {
+  const problem = $('#npProblem').value.trim();
+  const solution = $('#npSolution').value.trim();
+  if (!problem || !solution) return toast('Both problem and solution are required.');
+  $('#saveBtn').disabled = true;
+  try {
+    const res = await api('/api/entries', 'POST', { problem, solution, tags: $('#npTags').value.trim() });
+    $('#npProblem').value = ''; $('#npSolution').value = ''; $('#npTags').value = '';
+    toast(res.warning || 'Saved to your logbook');
+    await load(1);   // newest entry is on page 1
+  } catch (e) { toast(e.message); }
+  $('#saveBtn').disabled = false;
+};
+
+function openEdit(id) {
+  const e = entries.find(x => x.ID === id);
+  if (!e) return;
+  editingId = id;
+  $('#edProblem').value = e.Problems;
+  $('#edSolution').value = e.Solutions;
+  $('#edTags').value = e.Tags || '';
+  $('#edDate').value = e.Date;
+  $('#editModal').showModal();
+}
+
+$('#edCancel').onclick = () => $('#editModal').close();
+
+$('#edSave').onclick = async () => {
+  $('#edSave').disabled = true;
+  try {
+    const res = await api(`/api/entries/${editingId}`, 'PUT', {
+      problem: $('#edProblem').value.trim(),
+      solution: $('#edSolution').value.trim(),
+      tags: $('#edTags').value.trim(),
+      date: $('#edDate').value });
+    $('#editModal').close();
+    toast(res.warning || 'Entry updated');
+    await load();
+  } catch (e) { toast(e.message); }
+  $('#edSave').disabled = false;
+};
+
+async function del(id) {
+  const e = entries.find(x => x.ID === id);
+  if (!confirm(`Delete this entry?\n\n"${e.Problems}"`)) return;
+  try {
+    await api(`/api/entries/${id}`, 'DELETE');
+    toast('Entry deleted');
+    await load();
+  } catch (err) { toast(err.message); }
+}
+
+/* keyboard: Ctrl+Enter saves the new entry */
+['npProblem', 'npSolution', 'npTags'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') $('#saveBtn').click();
+  });
+});
+
+/* Prefill the add form when arriving from a search "Save this answer" click */
+(function prefillFromSearch() {
+  const raw = localStorage.getItem('recall-prefill');
+  if (!raw) return;
+  localStorage.removeItem('recall-prefill');
+  try {
+    const p = JSON.parse(raw);
+    $('#npProblem').value = p.problem || '';
+    $('#npSolution').value = p.solution || '';
+    $('#npTags').value = p.tags || '';
+    const card = $('#npProblem').closest('section') || $('#npProblem');
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('prefill-flash');
+    setTimeout(() => card.classList.remove('prefill-flash'), 1500);
+    $('#npTags').focus();   // land on tags — the one thing worth adding
+    toast('Loaded from search — add tags, then save');
+  } catch (e) { /* ignore bad payload */ }
+})();
+
+load();
+</script>
+</body>
+</html>
