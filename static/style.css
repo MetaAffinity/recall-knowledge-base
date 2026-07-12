@@ -138,6 +138,41 @@ button:disabled { opacity: .55; cursor: default; }
 .chip:hover { color: var(--ink); border-color: var(--accent); }
 .chip:hover i { color: var(--accent); }
 
+/* ---- live search demo: types a query, a matching entry slides in ---- */
+.searchdemo { width: 100%; max-width: 500px; margin: 0 auto; text-align: left; }
+.sd-bar {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 14px; padding: 13px 16px; box-shadow: var(--shadow);
+  font: 500 1rem Inter, sans-serif;
+}
+.sd-prompt { color: var(--accent); font: 700 1.25rem "JetBrains Mono", monospace; line-height: 1; }
+.sd-query { color: var(--ink); white-space: nowrap; overflow: hidden; }
+.sd-cursor { color: var(--accent); margin-left: -5px; animation: blink 1.05s steps(1) infinite; }
+.sd-mag { margin-left: auto; width: 18px; height: 18px; color: var(--muted); flex: none; }
+
+.sd-card {
+  display: grid; grid-template-columns: 58px 1fr;
+  margin-top: 13px; overflow: hidden;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
+  border-radius: 14px; box-shadow: var(--shadow);
+  opacity: 0; transform: translateY(12px);
+  transition: opacity .45s ease, transform .45s ease;
+}
+.sd-card.show { opacity: 1; transform: translateY(0); }
+.sd-pct { position: relative; display: grid; place-items: center; background: var(--surface-2); border-right: 1px solid var(--line); }
+.sd-fill {
+  position: absolute; inset: auto 0 0 0; height: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 45%, transparent), var(--accent));
+  box-shadow: 0 0 16px -2px var(--accent);
+  transition: height .9s ease;
+}
+.sd-pct b { position: relative; z-index: 1; font: 700 12px "JetBrains Mono", monospace; color: var(--ink); }
+.sd-info { padding: 14px 16px; min-width: 0; }
+.sd-tag { color: var(--accent); font: 600 10px "JetBrains Mono", monospace; letter-spacing: .13em; margin-bottom: 6px; }
+.sd-sol { color: var(--ink); font: 500 .95rem Inter, sans-serif; }
+
 /* result / info cards lift a touch on hover */
 article.reveal { transition: transform .18s, box-shadow .18s, border-color .18s; }
 article.reveal:hover {
@@ -157,27 +192,30 @@ article.reveal:hover {
     linear-gradient(165deg, color-mix(in srgb, var(--surface) 96%, transparent), color-mix(in srgb, var(--bg) 90%, transparent));
   box-shadow: var(--shadow), inset 0 1px 0 color-mix(in srgb, #fff 7%, transparent);
 }
-.entry-card::before {          /* warm amber glow from the bottom-left corner */
+.entry-card::before {          /* large warm amber glow blooming from bottom-left */
   content: "";
   position: absolute;
-  left: -14%; bottom: -42%;
-  width: 58%; height: 95%;
-  background: radial-gradient(circle at center,
-    color-mix(in srgb, var(--accent) 34%, transparent), transparent 68%);
-  filter: blur(36px);
-  opacity: .75;
+  inset: 0;
   pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(58% 66% at 3% 104%,
+      color-mix(in srgb, #d8862e 84%, transparent) 0%,
+      color-mix(in srgb, #ad6318 54%, transparent) 36%, transparent 68%),
+    radial-gradient(130% 120% at -8% 112%,
+      color-mix(in srgb, #834710 48%, transparent) 0%, transparent 72%);
 }
-.entry-card::after {           /* faint dotted texture along the base */
+.entry-card::after {           /* dotted texture washing across the glowing base */
   content: "";
   position: absolute;
-  left: 0; right: 0; bottom: 0; height: 46px;
-  background-image: radial-gradient(color-mix(in srgb, var(--accent) 45%, transparent) 1px, transparent 1px);
-  background-size: 15px 15px;
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000);
-          mask-image: linear-gradient(180deg, transparent, #000);
-  opacity: .28;
+  left: 0; right: 0; bottom: 0; height: 90px;
   pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(color-mix(in srgb, #ad6318 64%, transparent) 1px, transparent 1px);
+  background-size: 15px 15px;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 85%);
+          mask-image: linear-gradient(180deg, transparent, #000 85%);
+  opacity: .36;
 }
 .entry-card > * { position: relative; z-index: 1; }
 /* frosted inputs inside the glass card, so the glow reads through */
@@ -400,5 +438,6 @@ dialog::backdrop {
   .caret-blink { animation: none; }
   .prefill-flash { animation: none; }
   .voice-mic.listening, .voice-mic-inline.listening { animation: none; }
+  .sd-cursor { animation: none; }
   * { transition: none !important; }
 }
