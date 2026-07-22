@@ -15,6 +15,7 @@
   --accent: #ffb454;
   --accent-2: #ffc98a;
   --accent-ink: #1c1204;
+  --tech: #6d6bff;          /* cool AI-tech accent (ambient glow only) */
   --danger: #ff7a7a;
   --shadow: 0 14px 40px -12px rgba(0, 0, 0, .55);
   --glow: 0 0 0 1px var(--accent), 0 12px 46px -12px rgba(255, 180, 84, .5);
@@ -35,6 +36,7 @@
   --accent: #d9820a;
   --accent-2: #b56b06;
   --accent-ink: #ffffff;
+  --tech: #6a5bd0;
   --danger: #cf3f3f;
   --shadow: 0 14px 40px -14px rgba(26, 35, 56, .16);
   --glow: 0 0 0 1px var(--accent), 0 12px 46px -14px rgba(217, 130, 10, .4);
@@ -57,15 +59,34 @@ body { background: var(--bg); }
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 26px 26px, 130px 130px, 130px 130px;
 }
+/* ambient AI-tech aurora — soft amber + indigo blobs drifting behind everything */
 .bg-grid::before {
+  content: "";
+  position: fixed;
+  inset: -25%;
+  pointer-events: none;
+  z-index: -1;   /* behind content, above the page background — keeps sticky/nav intact */
+  background:
+    radial-gradient(26% 30% at 18% 12%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 68%),
+    radial-gradient(24% 26% at 82% 8%,  color-mix(in srgb, var(--tech) 15%, transparent), transparent 66%),
+    radial-gradient(32% 34% at 70% 90%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%),
+    radial-gradient(24% 26% at 10% 84%, color-mix(in srgb, var(--tech) 11%, transparent), transparent 68%);
+  filter: blur(26px);
+  animation: aurora 26s ease-in-out infinite alternate;
+}
+/* a subtle bottom vignette to seat the content */
+.bg-grid::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: -1;   /* behind content, above the page background — keeps sticky/nav intact */
-  background:
-    radial-gradient(120% 60% at 50% -8%, var(--halo), transparent 60%),
-    linear-gradient(180deg, transparent 60%, var(--bg-deep) 100%);
+  z-index: -1;
+  background: linear-gradient(180deg, transparent 55%, var(--bg-deep) 100%);
+}
+@keyframes aurora {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(1.6%, -1.2%, 0) scale(1.07); }
+  100% { transform: translate3d(-1.8%, 1.4%, 0) scale(1.03); }
 }
 
 /* ------------------------------------------------------------- buttons ---- */
@@ -138,29 +159,58 @@ button:disabled { opacity: .55; cursor: default; }
 .chip:hover { color: var(--ink); border-color: var(--accent); }
 .chip:hover i { color: var(--accent); }
 
+/* ---- results mode: collapse the hero intro once a search runs ---- */
+#hero { transition: padding-top .45s ease; }
+#heroIntro {
+  overflow: hidden;
+  max-height: 680px;
+  transition: max-height .55s ease, opacity .4s ease, margin .4s ease, transform .45s ease;
+}
+#heroCount { transition: opacity .35s ease, max-height .45s ease, margin .4s ease; overflow: hidden; max-height: 60px; }
+#hero.results-mode { padding-top: 1.75rem; }
+#hero.results-mode #heroIntro {
+  max-height: 0; opacity: 0; margin: 0; transform: translateY(-14px); pointer-events: none;
+}
+#hero.results-mode #heroCount { max-height: 0; opacity: 0; margin: 0; }
+
 /* ---- live search demo: types a query, a matching entry slides in ---- */
 .searchdemo { width: 100%; max-width: 500px; margin: 0 auto; text-align: left; }
+.sd-stage { position: relative; height: 220px; }   /* reserved space so nothing below shifts */
 .sd-bar {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  overflow: hidden;
   display: flex; align-items: center; gap: 10px;
   background: var(--surface); border: 1px solid var(--line);
   border-radius: 14px; padding: 13px 16px; box-shadow: var(--shadow);
   font: 500 1rem Inter, sans-serif;
+  transition: top .55s cubic-bezier(.4,0,.2,1), transform .55s cubic-bezier(.4,0,.2,1), border-color .3s, box-shadow .3s;
 }
+.searchdemo.active .sd-bar { top: 4px; transform: translateY(0); }   /* moves up when a result lands */
+.sd-bar.scanning { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); box-shadow: var(--glow); }
 .sd-prompt { color: var(--accent); font: 700 1.25rem "JetBrains Mono", monospace; line-height: 1; }
 .sd-query { color: var(--ink); white-space: nowrap; overflow: hidden; }
 .sd-cursor { color: var(--accent); margin-left: -5px; animation: blink 1.05s steps(1) infinite; }
-.sd-mag { margin-left: auto; width: 18px; height: 18px; color: var(--muted); flex: none; }
+.sd-mag { margin-left: auto; width: 18px; height: 18px; color: var(--muted); flex: none; transition: color .3s, transform .3s; }
+.sd-bar.scanning .sd-mag { color: var(--accent); transform: scale(1.12); }
+.sd-scan {
+  position: absolute; left: 0; bottom: 0; height: 2px; width: 42%;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0; pointer-events: none;
+}
+.sd-bar.scanning .sd-scan { opacity: 1; animation: sdScan .9s ease-in-out infinite; }
+@keyframes sdScan { 0% { transform: translateX(-115%); } 100% { transform: translateX(300%); } }
 
 .sd-card {
+  position: absolute; left: 0; right: 0; top: 82px;
   display: grid; grid-template-columns: 58px 1fr;
-  margin-top: 13px; overflow: hidden;
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
   border-radius: 14px; box-shadow: var(--shadow);
-  opacity: 0; transform: translateY(12px);
-  transition: opacity .45s ease, transform .45s ease;
+  opacity: 0; transform: translateY(14px);
+  transition: opacity .45s ease .1s, transform .45s ease .1s;
 }
-.sd-card.show { opacity: 1; transform: translateY(0); }
+.searchdemo.active .sd-card { opacity: 1; transform: translateY(0); }
 .sd-pct { position: relative; display: grid; place-items: center; background: var(--surface-2); border-right: 1px solid var(--line); }
 .sd-fill {
   position: absolute; inset: auto 0 0 0; height: 0;
@@ -172,6 +222,15 @@ button:disabled { opacity: .55; cursor: default; }
 .sd-info { padding: 14px 16px; min-width: 0; }
 .sd-tag { color: var(--accent); font: 600 10px "JetBrains Mono", monospace; letter-spacing: .13em; margin-bottom: 6px; }
 .sd-sol { color: var(--ink); font: 500 .95rem Inter, sans-serif; }
+.sd-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.sd-tags span {
+  font: 500 10px "JetBrains Mono", monospace; color: var(--muted);
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 2px 7px;
+  opacity: 0; transform: translateY(5px);
+  transition: opacity .35s ease, transform .35s ease;
+}
+.sd-tags span.in { opacity: 1; transform: none; }
 
 /* result / info cards lift a touch on hover */
 article.reveal { transition: transform .18s, box-shadow .18s, border-color .18s; }
@@ -180,6 +239,72 @@ article.reveal:hover {
   box-shadow: var(--shadow);
   border-color: var(--line-strong);
 }
+
+/* ---- result reveal 'branches': pipes from search → cards; click a card to feature it ---- */
+#results.results-flow { max-width: none !important; width: min(1900px, 96%) !important; }
+.flowwrap { position: relative; }
+.flowpipes { display: block; width: 100%; height: 70px; overflow: visible; transition: opacity .35s ease; }
+.flowpipes .pipe { fill: none; stroke: var(--line-strong); stroke-width: 2; }
+.flowpipes .pipehead {
+  fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  opacity: 0; transition: opacity .3s ease;
+}
+.flowpipes .pipehead.in { opacity: 1; }
+
+.bento {
+  display: grid; gap: 18px; align-items: start;
+  grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));   /* equal row until a card is opened */
+  transition: grid-template-columns .35s ease;
+}
+.bento.solo { grid-template-columns: 1fr; }
+.bento.has-main { grid-template-columns: 1.7fr 1fr; }           /* opened: big left + stacked right */
+.bento.has-main > .bcard.is-main { grid-column: 1; grid-row: 1 / span 50; }
+.bento.has-main > .bcard:not(.is-main) { grid-column: 2; }
+@media (max-width: 720px) {
+  .bento, .bento.has-main { grid-template-columns: 1fr; }
+  .bento.has-main > .bcard { grid-column: 1; grid-row: auto; }
+}
+
+.bcard {
+  border: 1px solid var(--line); border-radius: 16px; background: var(--surface);
+  box-shadow: var(--shadow); overflow: hidden;
+  opacity: 0; transform: translateY(10px);
+  transition: opacity .4s ease, transform .45s cubic-bezier(.34, 1.35, .5, 1), border-color .18s, box-shadow .2s;
+}
+.bcard.branch-in { opacity: 1; transform: none; }
+.bcard:hover { border-color: var(--line-strong); }
+/* only the main answer (best match) keeps the amber border — so it stays
+   distinct even when another card is expanded */
+.bcard.is-best {
+  border-color: color-mix(in srgb, var(--accent) 65%, var(--line));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), var(--shadow);
+}
+/* best match's score badge goes green to signal the strongest hit */
+.bcard.is-best .bcard-pct { background: #35c98a; color: #06251a; }
+.bcard-head {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left;
+  background: none; border: 0; cursor: pointer; padding: 18px 20px; color: var(--ink);
+}
+.bcard-pct {
+  font: 700 13px "JetBrains Mono", monospace; color: var(--accent-ink);
+  background: var(--accent); border-radius: 8px; padding: 4px 9px; flex: none;
+}
+.bcard-titles { min-width: 0; flex: 1; }
+.bcard-title { display: block; font: 600 1.08rem/1.35 "Bricolage Grotesque", sans-serif; }
+.bcard-snip {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  margin-top: 5px; font-size: .88rem; color: var(--muted); overflow: hidden;
+}
+.bcard.expanded .bcard-snip { display: none; }
+.bcard-chev { color: var(--muted); flex: none; margin-top: 3px; transition: transform .25s ease; }
+.bcard.expanded .bcard-chev { transform: rotate(180deg); }
+.bcard-body { display: none; padding: 0 20px 18px; }
+.bcard.expanded .bcard-body { display: block; }
+.bcard-body .solution {
+  color: var(--ink); font-size: .92rem; white-space: pre-wrap; overflow-wrap: anywhere;
+  max-height: 340px; overflow-y: auto;      /* long solutions scroll instead of ballooning */
+}
+.bcard-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 
 /* premium "new entry" card — dark glass with an amber glow bleeding in */
 .entry-card {
@@ -439,5 +564,6 @@ dialog::backdrop {
   .prefill-flash { animation: none; }
   .voice-mic.listening, .voice-mic-inline.listening { animation: none; }
   .sd-cursor { animation: none; }
+  .bg-grid::before { animation: none; }
   * { transition: none !important; }
 }

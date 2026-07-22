@@ -12,3 +12,6 @@ problems.csv
 PROJECT_SUMMARY.md
 second brain like keywords.txt
 *.notes.txt
+
+# marketing landing page — kept local, not part of the app repo
+landing/

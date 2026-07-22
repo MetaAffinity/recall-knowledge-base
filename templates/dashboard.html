@@ -69,23 +69,23 @@ tailwind.config = {
 
   <!-- new entry -->
   <section class="entry-card p-6 md:p-7 mb-6">
-    <div class="flex items-center gap-3 mb-5">
+    <div class="flex items-center gap-3 mb-6">
       <span class="grid place-items-center w-9 h-9 rounded-xl border border-accent/40 bg-accent/10 text-accent shrink-0">
         <i data-lucide="plus" class="w-4 h-4"></i>
       </span>
-      <div>
+      <div class="min-w-0">
         <h3 class="font-display font-semibold text-base leading-tight m-0">New entry</h3>
-        <p class="text-muted text-xs m-0">Capture what you figured out — type it or say it.</p>
+        <p class="text-muted text-xs m-0 truncate">Capture what you figured out — type it or say it.</p>
       </div>
-    </div>
-    <div class="flex items-center justify-end gap-2 mb-3">
-      <span class="font-mono text-[10px] text-muted uppercase tracking-widest">Voice</span>
-      <select class="voice-lang input !w-auto !py-1.5 !px-2 text-xs" aria-label="Voice language">
-        <option value="en-US">English</option>
-        <option value="en-IN">English (India)</option>
-        <option value="ur-PK">اردو</option>
-        <option value="hi-IN">हिन्दी</option>
-      </select>
+      <div class="ml-auto flex items-center gap-2 shrink-0">
+        <span class="font-mono text-[10px] text-muted uppercase tracking-widest hidden sm:inline">Voice</span>
+        <select class="voice-lang input !w-auto !py-1.5 !px-2 text-xs" aria-label="Voice language">
+          <option value="en-US">English</option>
+          <option value="en-IN">English (India)</option>
+          <option value="ur-PK">اردو</option>
+          <option value="hi-IN">हिन्दी</option>
+        </select>
+      </div>
     </div>
     <div class="mb-4">
       <label for="npProblem" class="block font-semibold text-xs text-muted mb-1.5">
@@ -213,6 +213,7 @@ tailwind.config = {
 const $ = s => document.querySelector(s);
 let entries = [];          // current page only
 let page = 1, pages = 1, total = 0, pending = 0;
+let filterQ = '';          // active filter query (searched on the backend)
 let editingId = null;
 lucide.createIcons();
 
@@ -244,11 +245,9 @@ async function api(url, method = 'GET', body) {
 }
 
 function render() {
-  const q = $('#filterInput').value.trim().toLowerCase();
-  const shown = entries.filter(e =>
-    !q || e.Problems.toLowerCase().includes(q) || e.Solutions.toLowerCase().includes(q)
-       || (e.Tags || '').toLowerCase().includes(q));
-  $('#count').textContent = `${total} entries`;
+  const shown = entries;   // filtering happens on the backend across all entries
+  $('#count').textContent = filterQ
+    ? `${total} match${total === 1 ? '' : 'es'}` : `${total} entries`;
   // pending-index warning banner
   const bar = $('#pendingBar');
   bar.classList.toggle('hidden', pending === 0);
@@ -278,7 +277,7 @@ function render() {
       </td>
     </tr>`).join('')
     : `<tr><td colspan="4" class="td text-center text-muted py-9">
-        No entries${q ? ' match this filter' : ' yet — save your first one above'}.</td></tr>`;
+        No entries${filterQ ? ' match this filter' : ' yet — save your first one above'}.</td></tr>`;
   lucide.createIcons();
   document.querySelectorAll('.editBtn').forEach(b => b.onclick = () => openEdit(b.closest('tr').dataset.id));
   document.querySelectorAll('.delBtn').forEach(b => b.onclick = () => del(b.closest('tr').dataset.id));
@@ -286,7 +285,7 @@ function render() {
 
 async function load(p = page) {
   try {
-    const data = await api(`/api/entries?page=${p}`);
+    const data = await api(`/api/entries?page=${p}&q=${encodeURIComponent(filterQ)}`);
     entries = data.entries;
     page = data.page; pages = data.pages; total = data.total;
     pending = data.pending || 0;
@@ -294,7 +293,13 @@ async function load(p = page) {
   } catch (e) { toast(e.message); }
 }
 
-$('#filterInput').oninput = render;   // filters the current page
+// filter searches the WHOLE logbook on the backend (debounced), resets to page 1
+let filterTimer;
+$('#filterInput').oninput = e => {
+  filterQ = e.target.value.trim();
+  clearTimeout(filterTimer);
+  filterTimer = setTimeout(() => load(1), 250);
+};
 $('#prevBtn').onclick = () => { if (page > 1) load(page - 1); };
 $('#nextBtn').onclick = () => { if (page < pages) load(page + 1); };
 $('#reindexBtn').onclick = async () => {

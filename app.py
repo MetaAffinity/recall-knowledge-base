@@ -56,6 +56,12 @@ PAGE_SIZE = max(1, int(os.getenv("PAGE_SIZE", "25")))
 # Set RELATED_RESULTS in .env (0 = only the best match, no related cards).
 RELATED_RESULTS = max(0, int(os.getenv("RELATED_RESULTS", "2")))
 
+# How search results animate in: "classic" (stagger fade) or "branches"
+# (an amber branch grows and cards appear one by one). Set in .env.
+REVEAL_STYLE = os.getenv("REVEAL_STYLE", "classic").strip().lower()
+if REVEAL_STYLE not in ("classic", "branches"):
+    REVEAL_STYLE = "classic"
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "admin")
 AUTO_GIT_COMMIT = os.getenv("AUTO_GIT_COMMIT", "false").lower() == "true"
@@ -296,7 +302,8 @@ def require_auth(fn):
 
 @app.route("/")
 def index():
-    return render_template("index.html", total=len(load_df()))
+    return render_template("index.html", total=len(load_df()),
+                           reveal_style=REVEAL_STYLE)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -384,8 +391,11 @@ def api_search():
         hits.append({"id": _id, "score": round(1 - dist, 4), **meta})
 
     best = hits[0] if hits and hits[0]["score"] >= PRIMARY_THRESHOLD else None
-    related = [h for h in hits if h is not best
-               and h["score"] >= SECONDARY_THRESHOLD][:RELATED_RESULTS]
+    # only surface "related" alongside a real best match — otherwise generic
+    # nearest-neighbours (noise) would show for unrelated queries like "hello".
+    related = ([h for h in hits if h is not best
+                and h["score"] >= SECONDARY_THRESHOLD][:RELATED_RESULTS]
+               if best else [])
 
     return jsonify({"found": best is not None, "best": best,
                     "related": related, "offline": False})
@@ -486,9 +496,22 @@ def api_chat():
 @app.route("/api/entries", methods=["GET"])
 @require_auth
 def list_entries():
-    """Return one page of entries (newest first) so the dashboard never has to
-    load/render the whole list at once. ?page=1&limit=25"""
-    df = load_df().iloc[::-1]  # newest first
+    """Return one page of entries (newest first). ?page=1&limit=25&q=text
+    The optional q filters across ALL entries (Problem/Solution/Tags) before
+    paginating, so the dashboard filter searches the whole logbook, not one page."""
+    full = load_df().iloc[::-1]  # newest first
+
+    # pending count is always over the WHOLE logbook, regardless of the filter
+    stored_ids = set(collection.get(include=[])["ids"])
+    pending = int((~full["ID"].isin(stored_ids)).sum())
+
+    q = request.args.get("q", "").strip().lower()
+    df = full
+    if q:
+        cols = full["Problems"].str.lower() + "\n" + full["Solutions"].str.lower() \
+               + "\n" + full["Tags"].str.lower()
+        df = full[cols.str.contains(q, na=False, regex=False)]
+
     total = len(df)
     try:
         page = max(1, int(request.args.get("page", 1)))
@@ -502,10 +525,6 @@ def list_entries():
     start = (page - 1) * limit
     page_df = df.iloc[start:start + limit]
 
-    # which entries are actually indexed for search? (saved-but-not-embedded
-    # ones show up here so the dashboard can flag them)
-    stored_ids = set(collection.get(include=[])["ids"])
-    pending = int((~df["ID"].isin(stored_ids)).sum())
     rows = page_df.to_dict(orient="records")
     for r in rows:
         r["indexed"] = r["ID"] in stored_ids

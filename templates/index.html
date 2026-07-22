@@ -66,31 +66,37 @@ tailwind.config = {
 </header>
 
 <main>
-  <section class="max-w-3xl mx-auto text-center px-5 pt-16 md:pt-24">
+  <section id="hero" class="max-w-3xl mx-auto text-center px-5 pt-16 md:pt-24">
+   <div id="heroIntro">
     <div class="hero-item mb-6"><span class="eyebrow">Personal knowledge base</span></div>
     <h1 class="font-display font-extrabold tracking-tight leading-[1.02] whitespace-nowrap hero-item"
         style="font-size: clamp(1.5rem, 6.6vw, 3.6rem)">
       Solve once. <span class="text-accent">Find forever.</span>
     </h1>
 
-    <div class="hero-item mt-8 mb-9 searchdemo" aria-hidden="true">
-      <div class="sd-bar">
-        <span class="sd-prompt">›</span>
-        <span class="sd-query"></span><span class="sd-cursor">▌</span>
-        <svg class="sd-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
-        </svg>
-      </div>
-      <div class="sd-card">
-        <div class="sd-pct"><i class="sd-fill"></i><b>0%</b></div>
-        <div class="sd-info">
-          <div class="sd-tag">◈ FROM YOUR LOGBOOK</div>
-          <div class="sd-sol"></div>
+    <div id="demoSection" class="hero-item mt-8 mb-8 searchdemo" aria-hidden="true">
+      <div class="sd-stage">
+        <div class="sd-bar">
+          <span class="sd-prompt">›</span>
+          <span class="sd-query"></span><span class="sd-cursor">▌</span>
+          <svg class="sd-mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+          </svg>
+          <i class="sd-scan"></i>
+        </div>
+        <div class="sd-card">
+          <div class="sd-pct"><i class="sd-fill"></i><b>0%</b></div>
+          <div class="sd-info">
+            <div class="sd-tag">◈ FROM YOUR LOGBOOK</div>
+            <div class="sd-sol"></div>
+            <div class="sd-tags"></div>
+          </div>
         </div>
       </div>
     </div>
 
     <p class="text-muted text-lg mb-10 hero-item max-w-xl mx-auto"><span class="text-accent font-semibold">Your second brain</span> for everything you've figured out — code, marketing, recipes, settings — searchable in your own words.</p>
+   </div>
 
     <div id="offlineBar" class="hidden items-center justify-center gap-2 mb-4 mx-auto max-w-md
         rounded-xl border border-danger/50 bg-danger/10 px-4 py-2 text-sm text-ink">
@@ -111,12 +117,19 @@ tailwind.config = {
       </button>
     </form>
 
+    <!-- recent-search chips removed for a cleaner hero
     <div id="recents" class="hero-item flex flex-wrap gap-2 justify-center mt-5"></div>
+    -->
 
-    <div class="hero-item font-mono text-xs text-muted tracking-widest uppercase mt-9">
+    <!-- entry count — already shown on the dashboard, hidden here
+    <div id="heroCount" class="hero-item font-mono text-xs text-muted tracking-widest uppercase mt-9">
       <span class="text-accent font-bold text-sm" id="countUp" data-count="{{ total }}">{{ total }}</span>
       things figured out &amp; saved
     </div>
+    -->
+
+    <div class="hero-item h-2"></div>
+
   </section>
 
   <section id="results" aria-live="polite" class="max-w-3xl mx-auto px-5 mt-12 mb-24 grid gap-4"></section>
@@ -132,6 +145,65 @@ const results = $('#results');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 lucide.createIcons();
 
+/* result reveal style — set once via REVEAL_STYLE in .env:
+   'classic'  = cards stagger-fade in
+   'branches' = an amber branch grows and cards appear one-by-one */
+const REVEAL = "{{ reveal_style }}";
+
+/* classic reveal — full cards stagger-fade in */
+function classicReveal() {
+  const cards = [...document.querySelectorAll('#results .reveal')];
+  const setGauge = c => { const g = c.querySelector('.gaugefill'); if (g) g.style.height = g.dataset.h + '%'; };
+  if (!reduceMotion && window.gsap) {
+    gsap.from('.reveal', { y: 16, opacity: 0, duration: .45, stagger: .08, ease: 'power3.out' });
+    cards.forEach(c => { const g = c.querySelector('.gaugefill');
+      if (g) gsap.to(g, { height: g.dataset.h + '%', duration: .8, delay: .15, ease: 'power2.out' }); });
+  } else {
+    cards.forEach(setGauge);
+  }
+}
+
+/* branches reveal — draw the pipes from the search bar, then pop cards in */
+function branchReveal() {
+  const cards = [...results.querySelectorAll('.bcard')];
+  drawPipes(!reduceMotion);
+  if (reduceMotion) { cards.forEach(c => c.classList.add('branch-in')); return; }
+  cards.forEach((c, i) => setTimeout(() => c.classList.add('branch-in'), 260 + i * 160));
+}
+
+function drawPipes(animate) {
+  const wrap = results.querySelector('.flowwrap');
+  if (!wrap) return;
+  const svg = wrap.querySelector('.flowpipes');
+  const cards = [...wrap.querySelectorAll('.bento > .bcard')];
+  const wr = wrap.getBoundingClientRect();
+  const band = 70, sx = wr.width / 2, sy = 2;
+  svg.setAttribute('viewBox', `0 0 ${Math.round(wr.width)} ${band}`);
+  let inner = ''; const heads = [];
+  cards.forEach(c => {
+    const cr = c.getBoundingClientRect();
+    const tx = cr.left - wr.left + cr.width / 2;
+    inner += `<path class="pipe" d="M${sx} ${sy} C ${sx} ${band * 0.6}, ${tx} ${band * 0.3}, ${tx} ${band - 6}"/>`;
+    heads.push(tx);
+  });
+  heads.forEach(tx => { inner += `<path class="pipehead" d="M${tx - 5} ${band - 12} L${tx} ${band - 6} L${tx + 5} ${band - 12}"/>`; });
+  svg.innerHTML = inner;
+  svg.querySelectorAll('.pipe').forEach((p, i) => {
+    if (!animate) return;
+    const len = p.getTotalLength();
+    p.style.strokeDasharray = len; p.style.strokeDashoffset = len;
+    requestAnimationFrame(() => {
+      p.style.transition = 'stroke-dashoffset .55s ease'; p.style.transitionDelay = (0.1 + i * 0.1) + 's';
+      p.style.strokeDashoffset = '0';
+    });
+  });
+  svg.querySelectorAll('.pipehead').forEach((h, i) =>
+    animate ? setTimeout(() => h.classList.add('in'), 520 + i * 110) : h.classList.add('in'));
+}
+addEventListener('resize', () => {
+  if (results.querySelector('.flowwrap') && !results.querySelector('.bento.has-main')) drawPipes(false);
+});
+
 /* ---------------------------------------------------------------- theme */
 $('#themeBtn').onclick = () => {
   const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
@@ -143,16 +215,20 @@ $('#themeBtn').onclick = () => {
 if (!reduceMotion && window.gsap) {
   gsap.from('.hero-item', { y: 22, opacity: 0, duration: .7, stagger: .09,
     ease: 'power3.out', clearProps: 'opacity,transform' });
-  const el = $('#countUp'), target = +el.dataset.count;
-  const obj = { v: 0 };
-  gsap.to(obj, { v: target, duration: 1.1, delay: .35, ease: 'power2.out',
-    onUpdate: () => { el.textContent = Math.round(obj.v); } });
+  const el = $('#countUp');
+  if (el) {
+    const obj = { v: 0 }, target = +el.dataset.count;
+    gsap.to(obj, { v: target, duration: 1.1, delay: .35, ease: 'power2.out',
+      onUpdate: () => { el.textContent = Math.round(obj.v); } });
+  }
 }
 
 /* -------------------------------------------------------- recent chips */
 function renderRecents() {
+  const box = $('#recents');
+  if (!box) return;                       // recents chips are disabled — skip
   const items = JSON.parse(localStorage.getItem('recall-recent') || '[]');
-  $('#recents').innerHTML = items.map(q => `
+  box.innerHTML = items.map(q => `
     <button type="button" class="chip">
       <i data-lucide="history" class="w-3 h-3"></i>${escapeHtml(q)}
     </button>`).join('');
@@ -172,31 +248,36 @@ renderRecents();
 (function searchDemo() {
   const wrap = $('.searchdemo');
   if (!wrap) return;
+  const bar = wrap.querySelector('.sd-bar');
   const qEl = wrap.querySelector('.sd-query');
   const cursor = wrap.querySelector('.sd-cursor');
   const card = wrap.querySelector('.sd-card');
   const fill = wrap.querySelector('.sd-fill');
   const pctB = wrap.querySelector('.sd-pct b');
   const sol = wrap.querySelector('.sd-sol');
+  const tagsEl = wrap.querySelector('.sd-tags');
   const pairs = [
-    { q: 'flask cors error',            p: 92, s: 'Install flask-cors, then add CORS(app).' },
-    { q: 'facebook ads rejected',       p: 88, s: 'Keep image text under 20% of the image.' },
-    { q: 'php code not working',        p: 95, s: 'Install the WAMP server first.' },
-    { q: 'where is my gsap menu plugin',p: 90, s: 'In D:/woo → custom plugins folder.' },
+    { q: 'flask cors error',             p: 92, s: 'Install flask-cors, then add CORS(app).', t: ['flask', 'python', 'web'] },
+    { q: 'facebook ads rejected',        p: 88, s: 'Keep image text under 20% of the image.', t: ['facebook', 'marketing'] },
+    { q: 'php code not working',         p: 95, s: 'Install the WAMP server first.',           t: ['php', 'web'] },
+    { q: 'where is my gsap menu plugin', p: 90, s: 'In D:/woo → custom plugins folder.',       t: ['wordpress', 'gsap'] },
   ];
+  const tagsHtml = t => t.map(x => `<span>#${x}</span>`).join('');
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   if (reduceMotion) {           // static: just show the first pair, resolved
     const d = pairs[0];
     qEl.textContent = d.q; cursor.style.display = 'none';
     sol.textContent = d.s; pctB.textContent = d.p + '%';
-    fill.style.height = d.p + '%'; card.classList.add('show');
+    fill.style.height = d.p + '%'; tagsEl.innerHTML = tagsHtml(d.t);
+    tagsEl.querySelectorAll('span').forEach(s => s.classList.add('in'));
+    wrap.classList.add('active');
     return;
   }
 
   async function type(text) {
     qEl.textContent = '';
-    for (const ch of text) { qEl.textContent += ch; await sleep(52 + Math.random() * 46); }
+    for (const ch of text) { qEl.textContent += ch; await sleep(28 + Math.random() * 26); }
   }
   async function countTo(target) {
     const start = performance.now(), dur = 850;
@@ -212,15 +293,20 @@ renderRecents();
     let i = 0;
     while (true) {
       const d = pairs[i % pairs.length];
-      card.classList.remove('show'); fill.style.height = '0'; pctB.textContent = '0%';
-      await sleep(450);
+      wrap.classList.remove('active'); fill.style.height = '0'; pctB.textContent = '0%'; tagsEl.innerHTML = '';
+      await sleep(650);
       await type(d.q);
-      await sleep(520);
+      await sleep(300);
+      bar.classList.add('scanning');          // "searching your logbook…"
+      await sleep(900);
+      bar.classList.remove('scanning');
       sol.textContent = d.s;
-      card.classList.add('show');
+      tagsEl.innerHTML = tagsHtml(d.t);
+      wrap.classList.add('active');           // bar moves up + result slides in
       fill.style.height = d.p + '%';
       await countTo(d.p);
-      await sleep(2300);
+      tagsEl.querySelectorAll('span').forEach((s, k) => setTimeout(() => s.classList.add('in'), 100 + k * 90));
+      await sleep(2500);
       i++;
     }
   }
@@ -254,6 +340,35 @@ function tagChips(tags) {
   return (tags || '').split(',').map(t => t.trim()).filter(Boolean).map(t =>
     `<span class="text-muted bg-surface2 border border-line rounded-md px-2 py-0.5 normal-case">#${escapeHtml(t)}</span>`
   ).join('');
+}
+
+/* compact card for the 'branches' flowchart — header (%, title, snippet) that
+   expands on click to the full solution + Copy / Explain / Chat. */
+function compactCardHtml(hit, kind) {
+  const pct = Math.round(hit.score * 100);
+  const best = kind === 'best';
+  return `
+  <article class="bcard${best ? ' is-best' : ''}" data-id="${hit.id}">
+    <button type="button" class="bcard-head">
+      <span class="bcard-pct">${pct}%</span>
+      <span class="bcard-titles">
+        <span class="bcard-title">${escapeHtml(hit.problem)}</span>
+        <span class="bcard-snip">${escapeHtml(hit.solution)}</span>
+      </span>
+      <i data-lucide="chevron-down" class="bcard-chev w-4 h-4"></i>
+    </button>
+    <div class="bcard-body">
+      <p class="solution m-0">${escapeHtml(hit.solution)}</p>
+      ${hit.tags && hit.tags.trim() ? `<div class="bcard-tags">${tagChips(hit.tags)}</div>` : ''}
+      <div class="flex flex-wrap gap-2 mt-3">
+        <button type="button" class="btn-ghost btn-sm copyBtn"><i data-lucide="copy" class="w-3.5 h-3.5"></i>Copy solution</button>
+        ${best ? `<button type="button" class="btn-ghost btn-sm explainBtn"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i>Explain with AI</button>` : ''}
+        <button type="button" class="btn-ghost btn-sm chatBtn"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i>Ask a follow-up</button>
+      </div>
+      <div class="aiblock" hidden></div>
+      <div class="chatblock" hidden></div>
+    </div>
+  </article>`;
 }
 
 function cardHtml(hit, kind) {
@@ -422,8 +537,23 @@ async function streamInto(block, promise, label, saveQuery) {
 }
 
 function wireCards(query) {
+  document.querySelectorAll('.bcard-head').forEach(h => h.onclick = () => {
+    const card = h.closest('.bcard'), bento = card.closest('.bento');
+    const svg = results.querySelector('.flowpipes');
+    if (!bento) { card.classList.toggle('expanded'); return; }
+    const wasMain = card.classList.contains('is-main');
+    bento.querySelectorAll('.bcard').forEach(c => c.classList.remove('is-main', 'expanded'));
+    if (wasMain) {                                   // click the open one again → back to equal row
+      bento.classList.remove('has-main');
+      if (svg) { svg.style.opacity = ''; setTimeout(() => drawPipes(false), 380); }
+    } else {                                         // feature this card → big left, others small right
+      bento.classList.add('has-main');
+      card.classList.add('is-main', 'expanded');
+      if (svg) svg.style.opacity = '0';              // pipes don't fit the bento reflow
+    }
+  });
   document.querySelectorAll('.copyBtn').forEach(b => b.onclick = () => {
-    const text = b.closest('.text-left').querySelector('.solution').textContent;
+    const text = b.closest('article').querySelector('.solution').textContent;
     navigator.clipboard.writeText(text).then(() => toast('Solution copied'));
   });
   document.querySelectorAll('.explainBtn').forEach(b => b.onclick = () => {
@@ -448,32 +578,52 @@ function wireCards(query) {
 async function search() {
   const query = $('#queryInput').value.trim();
   if (!query) return;
+  $('#hero').classList.add('results-mode');   // collapse the landing → focus on results
   results.innerHTML = `<div class="text-center text-muted font-mono text-sm py-8 animate-pulse">
     searching your logbook…</div>`;
   try {
     const d = await post('/api/search', { query });
     pushRecent(query);
     setOffline(d.offline);
-    let html = '';
-    if (d.found) html += cardHtml(d.best, 'best');
-    (d.related || []).forEach(h => html += cardHtml(h, 'related'));
-    if (!d.found) html += d.offline ? offlineNoMatchHtml() : notFoundHtml();
-    results.innerHTML = html;
-    lucide.createIcons();
-    if (!reduceMotion && window.gsap) {
-      gsap.from('.reveal', { y: 16, opacity: 0, duration: .45, stagger: .08, ease: 'power3.out' });
-      document.querySelectorAll('.gaugefill').forEach(i =>
-        gsap.to(i, { height: i.dataset.h + '%', duration: .8, delay: .15, ease: 'power2.out' }));
+    const hits = [];
+    if (d.found) hits.push([d.best, 'best']);
+    (d.related || []).forEach(h => hits.push([h, 'related']));
+
+    if (REVEAL === 'branches' && hits.length) {
+      results.classList.add('results-flow');
+      results.innerHTML = `<div class="flowwrap">
+          <svg class="flowpipes" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div class="bento${hits.length === 1 ? ' solo' : ''}" style="--n:${hits.length}">
+            ${hits.map(([h, k]) => compactCardHtml(h, k)).join('')}
+          </div>
+        </div>`;
+      lucide.createIcons();
+      wireCards(query);
+      branchReveal();
     } else {
-      document.querySelectorAll('.gaugefill').forEach(i => i.style.height = i.dataset.h + '%');
+      results.classList.remove('results-flow');
+      let html = '';
+      hits.forEach(([h, k]) => html += cardHtml(h, k));
+      if (!d.found) html += d.offline ? offlineNoMatchHtml() : notFoundHtml();
+      results.innerHTML = html;
+      lucide.createIcons();
+      wireCards(query);
+      classicReveal();
     }
-    wireCards(query);
   } catch (e) {
     results.innerHTML = `<div class="text-center text-danger py-6">${escapeHtml(e.message)}</div>`;
   }
 }
 
 $('#searchForm').onsubmit = e => { e.preventDefault(); search(); };
+
+/* clearing the box brings the landing back */
+$('#queryInput').addEventListener('input', e => {
+  if (!e.target.value.trim()) {
+    $('#hero').classList.remove('results-mode');
+    results.innerHTML = '';
+  }
+});
 
 /* show the offline hint immediately when the browser loses the network */
 addEventListener('offline', () => setOffline(true));
